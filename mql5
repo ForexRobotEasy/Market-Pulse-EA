@@ -1,0 +1,81 @@
+mql5
+//+------------------------------------------------------------------+
+//|                                                       Market Pulse EA |
+//|                                                Developed by Forex Robot Easy Team |
+//|                                                       forexroboteasy.com |
+//+------------------------------------------------------------------+
+
+// Define input parameters
+input double StopLoss = 100; // Stop loss value in pips
+input double TakeProfit = 200; // Take profit value in pips
+input int Slippage = 2; // Maximum allowed slippage in points
+input double TradeVolume = 0.01; // Trading volume in lots
+
+// Define global variables
+int ticket = 0; // Order ticket number
+
+//+------------------------------------------------------------------+
+//| Expert initialization function                                   |
+//+------------------------------------------------------------------+
+int OnInit()
+{
+    // Set up desired symbol and timeframe for trading
+    Symbol('EURUSD');
+    Period(Period_H1);
+
+    return(INIT_SUCCEEDED);
+}
+
+//+------------------------------------------------------------------+
+//| Expert deinitialization function                                 |
+//+------------------------------------------------------------------+
+void OnDeinit(const int reason)
+{
+    // Close any open trades before deinitializing
+    if(ticket > 0)
+        OrderClose(ticket, OrderLots(), OrderClosePrice(), Slippage);
+}
+
+//+------------------------------------------------------------------+
+//| Expert start function                                            |
+//+------------------------------------------------------------------+
+void OnTick()
+{
+    // Check if there are any open trades
+    if(ticket == 0)
+    {
+        // Calculate the breakout levels
+        double upperLevel = High[1] + StopLoss * Point;
+        double lowerLevel = Low[1] - StopLoss * Point;
+
+        // Check if the current price has crossed the upper level
+        if(Ask > upperLevel)
+        {
+            // Place a buy order
+            ticket = OrderSend(Symbol(), OP_BUY, TradeVolume, Ask, Slippage, 0, 0, 'Market Pulse EA', 0, 0, Green);
+        }
+
+        // Check if the current price has crossed the lower level
+        if(Bid < lowerLevel)
+        {
+            // Place a sell order
+            ticket = OrderSend(Symbol(), OP_SELL, TradeVolume, Bid, Slippage, 0, 0, 'Market Pulse EA', 0, 0, Red);
+        }
+    }
+    else
+    {
+        // Check if the trade reached the take profit level
+        if(OrderType() == OP_BUY && Bid >= OrderOpenPrice() + TakeProfit * Point)
+        {
+            // Close the buy order
+            OrderClose(ticket, OrderLots(), OrderClosePrice(), Slippage);
+            ticket = 0;
+        }
+        else if(OrderType() == OP_SELL && Ask <= OrderOpenPrice() - TakeProfit * Point)
+        {
+            // Close the sell order
+            OrderClose(ticket, OrderLots(), OrderClosePrice(), Slippage);
+            ticket = 0;
+        }
+    }
+}
